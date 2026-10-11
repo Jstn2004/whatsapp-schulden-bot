@@ -1,124 +1,140 @@
 # 💸 WhatsApp Debt Bot
 
-A WhatsApp bot for groups that tracks expenses and works out who owes whom how much, using as few transfers as possible.
+A WhatsApp bot that splits group expenses. Someone pays in advance and creates a request, the bot tells everyone involved what they owe and keeps track of who has paid.
 
-The bot's chat replies and the local web UI are in German; code, commands and docs are in English.
+Commands are in English, the bot's replies are in German.
 
-## Getting started
+> The previous version with `!` commands is tagged `v1`.
 
-```bash
-npm install
-npm start
+## Architecture
+
+```
+WhatsApp ⇄ gateway/ (Node.js, whatsapp-web.js) ⇄ HTTP ⇄ src/DebtBot.Host (.NET 9) → SQLite
 ```
 
-Your browser opens http://localhost:3000 with a QR code. Scan it with the **bot phone** under WhatsApp → Settings → Linked Devices. The page shows when the bot is connected. The login is persisted, so no scan is needed on the next start.
+| Part | Responsibility |
+|---|---|
+| `gateway/` | Connects to WhatsApp Web, forwards every message starting with `/` to the core (`POST /api/messages`), sends messages for the core (`POST /api/send`). Shows the login QR code. No business logic. |
+| `src/DebtBot.Core` | Domain model, command parser, splitting and rounding, all command handlers. No WhatsApp dependency. |
+| `src/DebtBot.Infrastructure` | EF Core with SQLite, HTTP client for the gateway (`IMessagingGateway`). |
+| `src/DebtBot.Host` | ASP.NET Core host: receives messages, processes them one at a time, sends the replies. |
+| `tests/DebtBot.Tests` | Unit and flow tests running the real engine against in-memory SQLite. |
 
-> ⚠️ The bot uses WhatsApp Web unofficially (whatsapp-web.js). This violates the WhatsApp Terms of Service and the number may get banned. **Use a secondary number (prepaid SIM), not your main number.**
+Incoming messages are queued and handled strictly one after another, so concurrent commands can never produce inconsistent data. Each command is saved in one transaction; a failing command saves nothing. Message IDs are stored, so a message delivered twice is only booked once.
 
 ## Commands
 
-| Command | What it does |
+| Command | Description |
 |---|---|
-| `!me Max` | tell the bot who you are (links your WhatsApp number to a name) |
-| `!people Max @Anna Tom` | add people to the group |
-| `!people` | show all people |
-| `!pay 45,50 Pizza` | you paid, split across everyone |
-| `!pay 30 "Cinema & Popcorn" --for @Anna @Tom` | split only across Anna and Tom |
-| `!pay 12 Drinks --by Max` | someone else paid |
-| `!request 20 Tickets --from Anna Tom` | Anna and Tom each owe you 20 € |
-| `!request 50 Rent --from Tom --by Max` | request on behalf of someone else |
-| `!repay --to @Max` | you paid back what you owe Max (amount taken from `!settle`) |
-| `!repay 10 --to Max` | you paid back a specific amount |
-| `!list` | show all entries |
-| `!delete 3` | delete entry #3 |
-| `!settle` | who owes whom how much |
-| `!remove Max` | stop including Max in new expenses by default |
-| `!remind on --after 3d` | remind people of debts open for 3 days (`12h` works too) |
-| `!remind off` / `!remind` | turn reminders off / show the setting |
-| `!reset yes` | reset everything |
-| `!help` | command overview |
-| `!pay --help` | usage of a single command (`-h` works too) |
+| `/help [command]` | all commands, or syntax and example of one |
+| `/group create <name> @…` | create a group (you become admin; the first group is the default ⭐) |
+| `/group add <group> @…` | add members (admins) |
+| `/group remove <group> @Person` | remove a member (admins; asks first if they have open items) |
+| `/group rename <group> <newName>` | rename (admins) |
+| `/group default <group>` | make it the default group (admins) |
+| `/group admin <group> @Person` | grant or revoke admin (admins) |
+| `/group settings <group> [remind=] [repeat=] [maxremind=]` | show or change settings |
+| `/group delete <group>` | delete, open requests are cancelled and debtors notified (admins) |
+| `/group list` · `/group info [group]` | overview |
+| `/request create <amount> "<reason>" [group=] [includeme=yes\|no] [@…]` | request money, split equally; shows a preview first |
+| `/pay [group]` | numbered list of your open shares (sent privately) |
+| `/pay 1 2` · `/pay all` · `/pay #12` | mark shares as paid |
+| `/yes` · `/no` · `/edit` | answer the bot's questions (previews expire after 5 minutes) |
 
-Commands work like a CLI: `!command <positional args> [--flag values…]`. Quote arguments that contain spaces (`"…"`, `„…“` and `“…”` all work). Flags can go anywhere; everything after a flag belongs to it until the next flag. `—for` (iOS turns `--` into a dash) is accepted as well.
+Arguments with spaces go in quotes (`"Pizza Freitag"`, typographic quotes work too). People are always given as WhatsApp @mentions. Personal answers (`/pay`) are sent as private messages.
 
-### Who paid?
+**Splitting:** with `includeme=yes` (default) the creator counts as one of the participants but owes nothing: 40 € in a group of 4 means 3 shares of 10 €. Leftover cents go to the first debtors (10 € / 3 = 3,34 + 3,33 + 3,33).
 
-`!pay` and `!request` use the sender of the message by default. The bot recognizes you automatically if the first word of your WhatsApp name matches someone in `!people`; otherwise send `!me <your name>` once. `--by` overrides the sender.
+### Roadmap
 
-### @mentions
+Implemented so far are steps 1–5 of the specification. Still to come: custom amounts (`split=custom`), deleting requests and pinning, verification mode (`verify=on`, `/confirm`, `/reject`), reminders, `/open`, `/me`, `/stats`.
 
-Wherever a command takes names you can @mention people instead. A mentioned person who is not known yet is added under the first word of their WhatsApp name and linked to their number, so they don't need `!me`. Typed names keep working, e.g. for people who are not in the WhatsApp group.
+## Running locally
 
-### Requests
+Requirements: Node.js 18+, .NET SDK 9.
 
-A request (`!request`) means each person listed in `--from` owes the full amount to the requester. Requests count in `!settle` like expenses but not in the total spending shown by `!list`.
+```bash
+# Terminal 1: core on http://localhost:5080
+dotnet run --project src/DebtBot.Host
 
-### Repayments and reminders
+# Terminal 2: gateway, opens http://localhost:3000 with the QR code
+cd gateway && npm install && npm start
+```
 
-`!repay` records that someone paid back money, which brings their balance towards zero. Without an amount it uses what `!settle` says the sender owes the `--to` person.
+Scan the QR code with the **bot phone** under WhatsApp → Settings → Linked Devices. The login is kept in `gateway/.wwebjs_auth`. The database is created automatically (`src/DebtBot.Host/data/debtbot.db`).
 
-With `!remind on`, the bot posts a message into the group that @mentions everyone who has owed money for longer than the configured time (default 3 days), and again after each further interval until they `!repay`. People who never linked their number (via `!me` or a mention) are listed by name without a mention. Reminders are off by default and only go out while the bot is running, so it should run on a server. The bot checks every 15 minutes (`REMINDER_CHECK_MINUTES`).
+> ⚠️ whatsapp-web.js uses WhatsApp Web unofficially. This violates the WhatsApp Terms of Service and the number may get banned. **Use a secondary number (prepaid SIM).**
 
-Each group has its own ledger. Data is stored in `data/groups.json`.
+### Configuration
+
+| Setting | Where | Default |
+|---|---|---|
+| Core URL / port | `Urls` in `appsettings.json` | `http://localhost:5080` |
+| Database file | `Database:Path` (relative to the host folder or absolute) | `data/debtbot.db` |
+| Gateway URL | `Gateway:Url` | `http://localhost:3000` |
+| Shared secret | `Gateway:Token` (core) and `GATEWAY_TOKEN` (gateway) | empty = off |
+| Commands per person and minute | `RateLimit:CommandsPerMinute` | `10` |
+| Gateway port | `GATEWAY_PORT` | `3000` |
+| Core URL for the gateway | `CORE_URL` | `http://localhost:5080` |
+| Pause between sent messages | `SEND_INTERVAL_MS` | `800` |
+| Open the QR page on start | `OPEN_BROWSER` | `true` except on Linux |
+
+.NET settings can also be set as environment variables, e.g. `Gateway__Token`.
+
+## Development
+
+```bash
+dotnet test                       # all tests
+dotnet tool restore               # once, installs dotnet-ef
+dotnet ef migrations add <Name> --project src/DebtBot.Infrastructure --startup-project src/DebtBot.Infrastructure --output-dir Persistence/Migrations
+```
+
+Migrations are applied automatically when the host starts.
 
 ## Running on a server
 
-Reminders only work while the bot runs around the clock. A small Linux VPS (1 GB RAM is enough) or a Raspberry Pi works. Steps for Ubuntu/Debian:
+A small Linux VPS or a Raspberry Pi is enough. Steps for Ubuntu/Debian, everything runs as the user `bot`:
 
 ```bash
-# Node.js 22 and git
+# Node.js 22, git and a user for the bot
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs git
-
-# A dedicated user for the bot
 sudo useradd --create-home bot
+
+# .NET 9 SDK for the bot user
+sudo -iu bot bash -c 'curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 9.0'
+
+# Code, build and gateway dependencies
 sudo -iu bot git clone https://github.com/Jstn2004/whatsapp-schulden-bot.git
-sudo -iu bot bash -c 'cd whatsapp-schulden-bot && npm install'
+sudo -iu bot bash -c 'cd whatsapp-schulden-bot && ~/.dotnet/dotnet publish src/DebtBot.Host -c Release -o publish'
+sudo -iu bot bash -c 'cd whatsapp-schulden-bot/gateway && npm install'
+cd /home/bot/whatsapp-schulden-bot/gateway && sudo npx puppeteer browsers install chrome --install-deps
 
-# System libraries that Chrome needs
-cd /home/bot/whatsapp-schulden-bot && sudo npx puppeteer browsers install chrome --install-deps
+# Shared secret and data folder
+sudo -iu bot bash -c 'mkdir -p ~/debt-bot-data && cp whatsapp-schulden-bot/deploy/debt-bot.env.example ~/debt-bot.env'
+sudo -iu bot nano /home/bot/debt-bot.env   # set the same random token twice (openssl rand -hex 32)
 ```
 
-**First login:** start the bot once by hand and scan the QR code printed in the terminal:
+**First login:** start the core as a service, then run the gateway once by hand and scan the QR code shown in the terminal:
 
 ```bash
-sudo -iu bot bash -c 'cd whatsapp-schulden-bot && npm start'
+sudo cp /home/bot/whatsapp-schulden-bot/deploy/*.service /etc/systemd/system/
+sudo systemctl enable --now debt-bot-core
+sudo -iu bot bash -c 'set -a && . ~/debt-bot.env && cd whatsapp-schulden-bot/gateway && OPEN_BROWSER=false npm start'
 ```
 
-If the terminal QR code is hard to scan, open an SSH tunnel from your computer (`ssh -L 3000:localhost:3000 you@server`) and open http://localhost:3000. The web UI only listens on localhost, on purpose: anyone who can scan the QR code gets access to the WhatsApp account. Stop the bot with `Ctrl+C` once it says it is running.
-
-**Run as a service** (starts on boot, restarts on crashes):
+If the terminal QR code is hard to scan, open an SSH tunnel (`ssh -L 3000:localhost:3000 you@server`) and open http://localhost:3000. Both services only listen on localhost on purpose: whoever can scan the QR code controls the WhatsApp account. Stop with `Ctrl+C` once it says it is connected, then:
 
 ```bash
-sudo cp /home/bot/whatsapp-schulden-bot/deploy/whatsapp-debt-bot.service /etc/systemd/system/
-sudo systemctl enable --now whatsapp-debt-bot
-journalctl -u whatsapp-debt-bot -f   # logs
+sudo systemctl enable --now debt-bot-gateway
+journalctl -u debt-bot-core -u debt-bot-gateway -f   # logs
 ```
 
-**Moving existing data:** copy `data/groups.json` to `/home/bot/whatsapp-schulden-bot/data/` before starting the service.
+> Run only one gateway at a time. If it also runs on your laptop, every reply comes twice. Remove the old linked device in WhatsApp.
 
-> Only run one instance at a time. If the bot also runs on your laptop, both answer every command and send every reminder twice. Stop it on the laptop and remove the old linked device in WhatsApp.
+**Updating:**
 
-**Updating:** `sudo -iu bot bash -c 'cd whatsapp-schulden-bot && git pull && npm install' && sudo systemctl restart whatsapp-debt-bot`
-
-### Environment variables
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `PORT` | `3000` | port of the local web UI |
-| `OPEN_BROWSER` | `true` except on Linux | open the web UI in a browser on start |
-| `REMINDER_CHECK_MINUTES` | `15` | how often to check for overdue debts |
-
-## Structure
-
-- `index.js` – WhatsApp connection
-- `src/commands.js` – parse and answer commands
-- `src/args.js` – CLI-style tokenizer and flag parser
-- `src/ledger.js` – compute balances and minimal transfers
-- `src/money.js` – parse/format amounts (stored internally as cents)
-- `src/reminders.js` – track how long debts are open and build reminder messages
-- `src/store.js` – JSON persistence
-- `src/web.js` – local web UI with QR code and connection status
-- `deploy/whatsapp-debt-bot.service` – systemd unit for servers
-
-Tests: `npm test`
+```bash
+sudo -iu bot bash -c 'cd whatsapp-schulden-bot && git pull && ~/.dotnet/dotnet publish src/DebtBot.Host -c Release -o publish && cd gateway && npm install'
+sudo systemctl restart debt-bot-core debt-bot-gateway
+```

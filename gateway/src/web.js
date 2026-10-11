@@ -1,4 +1,5 @@
 // Small local web UI: shows the QR code for connecting and the bot's status.
+// Other routes (the gateway API) are passed to handleApi.
 // The page itself stays in German since it is user-facing.
 const http = require('http');
 const QRCode = require('qrcode');
@@ -70,13 +71,10 @@ const PAGE = `<!doctype html>
     <div class="ready-icon">✅</div>
     <p id="who" class="sub"></p>
     <div class="commands">
-      <div><code>!me Max</code> sagen, wer du bist</div>
-      <div><code>!people Max Anna Tom</code> Leute anlegen</div>
-      <div><code>!pay 30 Pizza</code> Ausgabe erfassen</div>
-      <div><code>!request 20 Tickets --from Anna</code> Geld fordern</div>
-      <div><code>!settle</code> wer schuldet wem</div>
-      <div><code>!repay --to @Max</code> Schulden zurückzahlen</div>
-      <div><code>!help</code> alle Befehle</div>
+      <div><code>/group create WG @Anna @Ben</code> Gruppe anlegen</div>
+      <div><code>/request create 40 "Pizza"</code> Geld anfordern</div>
+      <div><code>/pay</code> offene Zahlungen</div>
+      <div><code>/help</code> alle Befehle</div>
     </div>
   </section>
 </main>
@@ -112,10 +110,11 @@ const PAGE = `<!doctype html>
 </body>
 </html>`;
 
-function startWebUi(port) {
+function startWebUi(port, handleApi) {
   const state = { state: 'starting', qr: null, who: null };
 
-  http.createServer((req, res) => {
+  http.createServer(async (req, res) => {
+    if (await handleApi(req, res)) return;
     if (req.url === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(state));

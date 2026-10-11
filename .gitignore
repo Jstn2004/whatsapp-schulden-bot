@@ -1,4 +1,18 @@
+# Node gateway
 node_modules/
 .wwebjs_auth/
 .wwebjs_cache/
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+.idea/
+
+# Data (contains phone numbers)
 data/
+legacy-data/
+*.db
+*.db-shm
+*.db-wal

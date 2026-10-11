@@ -1,0 +1,18 @@
+# systemd service for the Node.js WhatsApp gateway. See README "Running on a server".
+[Unit]
+Description=WhatsApp debt bot gateway (Node.js)
+After=network-online.target debt-bot-core.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bot
+WorkingDirectory=/home/bot/whatsapp-schulden-bot/gateway
+ExecStart=/usr/bin/node index.js
+EnvironmentFile=/home/bot/debt-bot.env
+Environment=OPEN_BROWSER=false
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

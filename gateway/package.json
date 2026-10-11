@@ -1,12 +1,11 @@
 {
-  "name": "whatsapp-schulden-bot",
+  "name": "whatsapp-debt-bot-gateway",
   "version": "1.0.0",
-  "description": "WhatsApp bot that tracks group expenses and splits debts",
+  "description": "WhatsApp gateway for the debt bot: forwards commands to the .NET core and sends its messages",
   "main": "index.js",
   "private": true,
   "scripts": {
-    "start": "node index.js",
-    "test": "node --test"
+    "start": "node index.js"
   },
   "engines": {
     "node": ">=18"

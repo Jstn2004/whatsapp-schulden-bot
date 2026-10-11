@@ -1,0 +1,19 @@
+# systemd service for the .NET core. See README "Running on a server".
+[Unit]
+Description=WhatsApp debt bot core (.NET)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bot
+WorkingDirectory=/home/bot/whatsapp-schulden-bot/publish
+ExecStart=/home/bot/.dotnet/dotnet DebtBot.Host.dll
+EnvironmentFile=/home/bot/debt-bot.env
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_ROOT=/home/bot/.dotnet
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
