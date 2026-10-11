@@ -1,41 +1,48 @@
-# 💸 WhatsApp Schulden-Bot
+# 💸 WhatsApp Debt Bot
 
-Ein WhatsApp-Bot für Gruppen, der Ausgaben erfasst und am Ende ausrechnet, wer wem wie viel schuldet, mit möglichst wenigen Überweisungen.
+A WhatsApp bot for groups that tracks expenses and works out who owes whom how much, using as few transfers as possible.
 
-## Starten
+The bot's chat replies and the local web UI are in German; code, commands and docs are in English.
+
+## Getting started
 
 ```bash
 npm install
 npm start
 ```
 
-Im Browser öffnet sich automatisch http://localhost:3000 mit einem QR-Code. Scanne ihn mit dem **Bot-Handy** unter WhatsApp → Einstellungen → Verknüpfte Geräte. Die Seite zeigt an, sobald der Bot verbunden ist. Der Login wird gespeichert, beim nächsten Start ist kein Scan mehr nötig.
+Your browser opens http://localhost:3000 with a QR code. Scan it with the **bot phone** under WhatsApp → Settings → Linked Devices. The page shows when the bot is connected. The login is persisted, so no scan is needed on the next start.
 
-> ⚠️ Der Bot nutzt WhatsApp Web inoffiziell (whatsapp-web.js). Das verstößt gegen die WhatsApp-Nutzungsbedingungen, die Nummer kann gesperrt werden. **Nimm eine Zweitnummer (Prepaid-SIM), nicht deine Hauptnummer.**
+> ⚠️ The bot uses WhatsApp Web unofficially (whatsapp-web.js). This violates the WhatsApp Terms of Service and the number may get banned. **Use a secondary number (prepaid SIM), not your main number.**
 
-## Befehle
+## Commands
 
-| Befehl | Was passiert |
+| Command | What it does |
 |---|---|
-| `!leute Max Anna Tom` | Leute zur Gruppe hinzufügen |
-| `!zahlt Max 45,50 Pizza` | Max hat bezahlt, wird auf alle aufgeteilt |
-| `!zahlt Max 30 Kino für Anna Tom` | nur auf Anna und Tom aufteilen |
-| `!liste` | alle Ausgaben anzeigen |
-| `!löschen 3` | Ausgabe Nr. 3 löschen |
-| `!abrechnung` | wer schuldet wem wie viel |
-| `!raus Max` | Max bei neuen Ausgaben nicht mehr automatisch einrechnen |
-| `!reset ja` | alles zurücksetzen |
-| `!hilfe` | Befehlsübersicht |
+| `!people Max Anna Tom` | add people to the group |
+| `!people` | show all people |
+| `!pay Max 45,50 Pizza` | Max paid, split across everyone |
+| `!pay Max 30 "Cinema & Popcorn" --for Anna Tom` | split only across Anna and Tom |
+| `!list` | show all expenses |
+| `!delete 3` | delete expense #3 |
+| `!settle` | who owes whom how much |
+| `!remove Max` | stop including Max in new expenses by default |
+| `!reset yes` | reset everything |
+| `!help` | command overview |
+| `!pay --help` | usage of a single command (`-h` works too) |
 
-Jede Gruppe hat ihre eigene Abrechnung. Die Daten liegen in `data/groups.json`.
+Commands work like a CLI: `!command <positional args> [--flag values…]`. Quote arguments that contain spaces (`"…"`, `„…“` and `“…”` all work). Flags can go anywhere; everything after a flag belongs to it until the next flag. `—for` (iOS turns `--` into a dash) is accepted as well.
 
-## Aufbau
+Each group has its own ledger. Data is stored in `data/groups.json`.
 
-- `index.js` – WhatsApp-Verbindung
-- `src/commands.js` – Befehle parsen und beantworten
-- `src/ledger.js` – Salden und minimale Überweisungen berechnen
-- `src/money.js` – Beträge parsen/formatieren (intern in Cent)
-- `src/store.js` – Speichern als JSON
-- `src/web.js` – lokale Weboberfläche mit QR-Code und Verbindungsstatus
+## Structure
+
+- `index.js` – WhatsApp connection
+- `src/commands.js` – parse and answer commands
+- `src/args.js` – CLI-style tokenizer and flag parser
+- `src/ledger.js` – compute balances and minimal transfers
+- `src/money.js` – parse/format amounts (stored internally as cents)
+- `src/store.js` – JSON persistence
+- `src/web.js` – local web UI with QR code and connection status
 
 Tests: `npm test`

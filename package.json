@@ -1,7 +1,7 @@
 {
   "name": "whatsapp-schulden-bot",
   "version": "1.0.0",
-  "description": "WhatsApp-Bot, der Ausgaben in Gruppen erfasst und Schulden aufteilt",
+  "description": "WhatsApp bot that tracks group expenses and splits debts",
   "main": "index.js",
   "private": true,
   "scripts": {

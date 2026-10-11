@@ -1,4 +1,5 @@
-// Kleine lokale Weboberfläche: zeigt den QR-Code zum Verbinden und den Status des Bots.
+// Small local web UI: shows the QR code for connecting and the bot's status.
+// The page itself stays in German since it is user-facing.
 const http = require('http');
 const QRCode = require('qrcode');
 
@@ -69,10 +70,10 @@ const PAGE = `<!doctype html>
     <div class="ready-icon">✅</div>
     <p id="who" class="sub"></p>
     <div class="commands">
-      <div><code>!leute Max Anna Tom</code> Leute anlegen</div>
-      <div><code>!zahlt Max 30 Pizza</code> Ausgabe erfassen</div>
-      <div><code>!abrechnung</code> wer schuldet wem</div>
-      <div><code>!hilfe</code> alle Befehle</div>
+      <div><code>!people Max Anna Tom</code> Leute anlegen</div>
+      <div><code>!pay Max 30 Pizza</code> Ausgabe erfassen</div>
+      <div><code>!settle</code> wer schuldet wem</div>
+      <div><code>!help</code> alle Befehle</div>
     </div>
   </section>
 </main>
@@ -120,7 +121,7 @@ function startWebUi(port) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(PAGE);
   }).listen(port, '127.0.0.1', () => {
-    console.log(`🌐 Oberfläche: http://localhost:${port}`);
+    console.log(`🌐 Web UI: http://localhost:${port}`);
   });
 
   return {

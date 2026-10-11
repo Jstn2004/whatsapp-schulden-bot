@@ -1,4 +1,4 @@
-// Speichert den Zustand aller Gruppen in einer JSON-Datei.
+// Persists the state of all groups in a JSON file.
 const fs = require('fs');
 const path = require('path');
 
@@ -21,7 +21,7 @@ function createStore(filePath) {
       data[groupId] = emptyGroup();
     },
     save() {
-      if (!filePath) return; // In Tests ohne Datei
+      if (!filePath) return; // In tests without a file
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       const tmp = `${filePath}.tmp`;
       fs.writeFileSync(tmp, JSON.stringify(data, null, 2));

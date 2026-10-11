@@ -1,13 +1,13 @@
-// Reine Rechenlogik: Salden berechnen und minimale Überweisungen ermitteln.
+// Pure calculation logic: compute balances and determine minimal transfers.
 
-// Teilt einen Betrag fair auf n Personen auf; übrige Cents gehen an die ersten.
+// Splits an amount fairly across n people; leftover cents go to the first ones.
 function splitEvenly(amount, n) {
   const base = Math.floor(amount / n);
   const rest = amount - base * n;
   return Array.from({ length: n }, (_, i) => base + (i < rest ? 1 : 0));
 }
 
-// Positiver Saldo = bekommt Geld, negativer Saldo = schuldet Geld.
+// Positive balance = is owed money, negative balance = owes money.
 function balances(expenses) {
   const result = new Map();
   const add = (name, cents) => result.set(name, (result.get(name) || 0) + cents);
@@ -20,7 +20,7 @@ function balances(expenses) {
   return result;
 }
 
-// Greedy: der größte Schuldner zahlt an den größten Gläubiger. Ergibt höchstens n-1 Überweisungen.
+// Greedy: the largest debtor pays the largest creditor. Yields at most n-1 transfers.
 function settle(balanceMap) {
   const creditors = [];
   const debtors = [];

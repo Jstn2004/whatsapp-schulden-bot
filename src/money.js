@@ -1,4 +1,4 @@
-// Beträge werden intern immer in Cent (Integer) gespeichert, um Rundungsfehler zu vermeiden.
+// Amounts are always stored internally as cents (integers) to avoid rounding errors.
 
 function parseAmount(input) {
   if (!input) return null;
