@@ -1,0 +1,20 @@
+# systemd service for running the bot on a Linux server.
+# Install: sudo cp deploy/whatsapp-debt-bot.service /etc/systemd/system/
+#          sudo systemctl enable --now whatsapp-debt-bot
+[Unit]
+Description=WhatsApp debt bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bot
+WorkingDirectory=/home/bot/whatsapp-schulden-bot
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=OPEN_BROWSER=false
+
+[Install]
+WantedBy=multi-user.target

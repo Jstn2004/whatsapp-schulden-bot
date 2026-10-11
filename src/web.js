@@ -75,6 +75,7 @@ const PAGE = `<!doctype html>
       <div><code>!pay 30 Pizza</code> Ausgabe erfassen</div>
       <div><code>!request 20 Tickets --from Anna</code> Geld fordern</div>
       <div><code>!settle</code> wer schuldet wem</div>
+      <div><code>!repay --to @Max</code> Schulden zurückzahlen</div>
       <div><code>!help</code> alle Befehle</div>
     </div>
   </section>
