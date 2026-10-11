@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 function emptyGroup() {
-  return { members: [], expenses: [], nextId: 1 };
+  // links maps a WhatsApp sender ID to a member name.
+  return { members: [], expenses: [], nextId: 1, links: {} };
 }
 
 function createStore(filePath) {
@@ -14,7 +15,8 @@ function createStore(filePath) {
 
   return {
     get(groupId) {
-      if (!data[groupId]) data[groupId] = emptyGroup();
+      // Spread fills in fields that groups saved by older versions are missing.
+      data[groupId] = { ...emptyGroup(), ...data[groupId] };
       return data[groupId];
     },
     reset(groupId) {

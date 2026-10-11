@@ -70,8 +70,10 @@ const PAGE = `<!doctype html>
     <div class="ready-icon">✅</div>
     <p id="who" class="sub"></p>
     <div class="commands">
+      <div><code>!me Max</code> sagen, wer du bist</div>
       <div><code>!people Max Anna Tom</code> Leute anlegen</div>
-      <div><code>!pay Max 30 Pizza</code> Ausgabe erfassen</div>
+      <div><code>!pay 30 Pizza</code> Ausgabe erfassen</div>
+      <div><code>!request 20 Tickets --from Anna</code> Geld fordern</div>
       <div><code>!settle</code> wer schuldet wem</div>
       <div><code>!help</code> alle Befehle</div>
     </div>

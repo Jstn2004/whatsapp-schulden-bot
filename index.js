@@ -41,9 +41,13 @@ client.on('message_create', async (msg) => {
   if (!msg.body.startsWith('!')) return;
   // Read the chat ID straight from the message; msg.getChat() tends to break on WhatsApp Web updates.
   const chatId = msg.fromMe ? msg.to : msg.from;
-  console.log(`📩 ${chatId}: ${msg.body}`);
+  // In groups msg.author is the sender; in direct chats it is empty and msg.from is the sender.
+  const sender = msg.fromMe
+    ? { id: client.info?.wid?._serialized, name: client.info?.pushname }
+    : { id: msg.author || msg.from, name: msg._data?.notifyName };
+  console.log(`📩 ${chatId} (${sender.name || sender.id}): ${msg.body}`);
   try {
-    const reply = handle(msg.body, chatId, store);
+    const reply = handle(msg.body, chatId, store, sender);
     if (!reply) return;
     try {
       await msg.reply(reply);
